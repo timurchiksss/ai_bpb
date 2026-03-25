@@ -1,0 +1,62 @@
+name: finai
+
+services:
+  redis:
+    image: redis:7
+    ports:
+      - "${REDIS_PORT}:6379"
+    volumes:
+      - redis_data:/data
+    restart: unless-stopped
+    command: redis-server --requirepass ${REDIS_PASSWORD}
+
+  postgres:
+    image: postgres:16
+    environment:
+      POSTGRES_USER: ${DB_USER}
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+      POSTGRES_DB: ${DB_NAME}
+    ports:
+      - "${DB_PORT}:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    restart: unless-stopped
+
+  pgadmin:
+    image: dpage/pgadmin4:9
+    restart: unless-stopped
+    environment:
+      PGADMIN_CONFIG_SERVER_MODE: 'False'
+      PGADMIN_CONFIG_MASTER_PASSWORD_REQUIRED: 'False'
+      PGADMIN_DEFAULT_EMAIL: 'admin@example.com'
+      PGADMIN_DEFAULT_PASSWORD: 'admin'
+    ports:
+      - "5050:80"
+    volumes:
+      - pgadmin_data:/var/lib/pgadmin
+      - pgadmin_root:/root
+    depends_on:
+      - postgres
+    configs:
+      - source: servers.json
+        target: /pgadmin4/servers.json
+    user: root
+
+volumes:
+  redis_data:
+  postgres_data:
+  pgadmin_data:
+  pgadmin_root:
+
+configs:
+  servers.json:
+    content: |
+      {"Servers": {"1": {
+        "Group": "Servers",
+        "Name": "PostgreSQL Database",
+        "Host": "postgres",
+        "Port": ${DB_PORT},
+        "MaintenanceDB": "postgres",
+        "Username": "${DB_USER}",
+        "SSLMode": "prefer"
+      }}}
